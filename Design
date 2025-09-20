@@ -1,0 +1,214 @@
+
+Non-technical staff	Needs a simple UI to fix mismatches in reports
+IT Administrator	Manages app settings and deployments
+3. 🗂️ Data Inputs & Structure
+3.1 JSON Files
+
+Located on a shared network drive
+
+Filenames follow convention:
+report1_{companyId}.json
+report2_{companyId}.json
+
+The files contain structured or nested JSON. Example:
+
+{
+  "company": {
+    "name": "Acme Inc",
+    "status": "pending"
+  },
+  "location": {
+    "city": "New York"
+  }
+}
+
+3.2 External API
+
+HTTP GET API to retrieve the latest record:
+
+GET https://example.com/api/company/{companyId}
+
+
+Returns JSON data in a similar structure for comparison.
+
+4. ⚙️ Configuration File: appsettings.json
+{
+  "JsonDirectoryPath": "\\\\network-drive\\jsons\\",
+  "EditableFields": [
+    "company.name",
+    "company.status",
+    "location.city"
+  ],
+  "AuditLogPath": "C:\\Logs\\audit.log",
+  "ApiBaseUrl": "https://example.com/api/company/"
+}
+
+
+This file controls:
+
+Where JSON files are located
+
+Which fields are editable
+
+Where to store the audit log
+
+The base URL for API
+
+5. 🎨 User Interface Design
+5.1 Main Form Layout
+Section	Elements
+Header	Company ID input (TextBox), Load button
+Selection	Dropdown to select matching record, Compare button
+DataGridView	Only mismatched fields with 4 columns: Field, Local Value, API Value, Update? Checkbox
+Action Buttons	Apply Selected Updates
+Footer	Status label, audit log path display
+5.2 DataGridView Columns
+Column	Type	Editable?
+FieldPath	string	❌
+LocalValue	string	❌
+ApiValue	string	❌
+Update	bool checkbox	✅
+6. 🔄 Application Flow
+Step 1: Prompt User
+
+Prompt user to enter CompanyId
+
+Use that to locate:
+
+report1_{companyId}.json
+
+report2_{companyId}.json
+
+Step 2: Load JSON Files
+
+Load both files into memory as JObject
+
+Merge them into a single representation
+
+Step 3: Call External API
+
+Perform GET {ApiBaseUrl}/{companyId}
+
+Load API JSON as JObject
+
+Step 4: Compare Data
+
+Loop through all EditableFields defined in config
+
+Use SelectToken(fieldPath) to fetch:
+
+Local value from merged JSON
+
+Remote value from API
+
+If different → add to List<MismatchItem>
+
+Step 5: Show UI
+
+Bind mismatches to DataGridView
+
+Show only mismatched rows
+
+Allow user to select checkboxes for updates
+
+Step 6: Apply Updates
+
+On Apply:
+
+For each checked field:
+
+Replace value in report1 or report2 depending on source (based on mapping logic or user choice)
+
+Append an audit log entry
+
+Step 7: Write Output
+
+Save updated JSON(s)
+
+Write entry to audit.log in format:
+
+[Timestamp] | [Username] | Field: company.status | From: "pending" → To: "approved"
+
+7. 📄 Data Structures
+7.1 MismatchItem Model
+public class MismatchItem
+{
+    public string FieldPath { get; set; }
+    public string LocalValue { get; set; }
+    public string ApiValue { get; set; }
+    public bool Update { get; set; }
+}
+
+8. 📜 Audit Logging
+
+One line per field updated
+
+Includes:
+
+Timestamp
+
+Windows username
+
+Field path
+
+Original value
+
+Updated value
+
+Append-only
+
+9. 🛠️ Tech Stack
+Layer	Tech / Library
+UI	WinForms
+JSON Parsing	Newtonsoft.Json (JObject)
+Config	System.Text.Json / Newtonsoft
+HTTP API	HttpClient
+Logging	StreamWriter or Serilog (optional)
+10. 🚀 Deployment
+
+Package as self-contained EXE (.NET 6+)
+
+Deploy by:
+
+Copying folder (EXE + appsettings.json)
+
+Optional: create installer (Inno Setup/MSIX)
+
+No admin rights required unless folder permissions dictate
+
+11. 🧪 Testing Scenarios
+Test Case	Expected Result
+JSON has no mismatches	Empty grid
+JSON files not found	Error message
+Invalid company ID	"Files not found" UI
+Selected field updated	JSON saved, log entry created
+User closes without saving	No updates written
+12. 🔮 Future Enhancements (Optional)
+
+Show difference highlighting (e.g., color diff in grid)
+
+Add Excel export of mismatched values
+
+Add field-level validation rules
+
+Use WPF if advanced UI/animations are needed
+
+Support multi-language UI for global use
+
+Integrate with Active Directory roles
+
+✅ Summary
+
+This design enables a developer or AI agent to:
+
+Dynamically compare structured JSON files
+
+Display mismatches only
+
+Allow selective field updates via a simple UI
+
+Log all changes
+
+Avoid custom data models
+
+Remain fully configurable and scalable
